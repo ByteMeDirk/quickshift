@@ -166,6 +166,34 @@ class QuickshiftLexer:
             if not tok:
                 break
 
+            # Inject protocol tokens when a string literal starts with a known protocol prefix.
+            # This follows the DSL design where storage protocol schemes are recognized as single tokens
+            # even when they appear inside quoted paths, e.g., path="file://...".
+            if tok.type == "STRING_LITERAL":
+                val = tok.value
+                proto_map = {
+                    "file://": "FILE_PROTOCOL",
+                    "s3://": "S3_PROTOCOL",
+                    "gs://": "GS_PROTOCOL",
+                    "wasbs://": "WASBS_PROTOCOL",
+                    # ToDo: Add more protocols
+                }
+                for prefix, ttype in proto_map.items():
+                    if isinstance(val, str) and val.startswith(prefix):
+                        # Create a synthetic protocol token to reflect the protocol prefix
+                        # while keeping the original string literal token as-is.
+                        ptok = lex.LexToken()
+                        ptok.type = ttype
+                        ptok.value = prefix
+                        ptok.lineno = tok.lineno
+                        ptok.lexpos = tok.lexpos
+                        self.tokens_list.append(ptok)
+                        if debug:
+                            print(
+                                f"{ptok.type:20s} {repr(ptok.value):30s} Line: {ptok.lineno:4d} Pos: {ptok.lexpos:5d}"
+                            )
+                        break
+
             self.tokens_list.append(tok)
 
             if debug:
