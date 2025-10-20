@@ -5,7 +5,13 @@ Generates LLVM IR from the AST
 
 from typing import Dict, Optional
 from llvmlite import ir
-from .ast_nodes import *
+from .ast_nodes import (
+    Program, Statement, Expression, IntegerLiteral, FloatLiteral,
+    StringLiteral, BooleanLiteral, Identifier, VariableDeclaration,
+    Assignment, BinaryOp, UnaryOp, IfStatement, WhileStatement,
+    ForStatement, FunctionDeclaration, FunctionCall, ReturnStatement,
+    Block, ExpressionStatement
+)
 
 
 class CodeGenError(Exception):
@@ -332,9 +338,17 @@ class CodeGenerator:
             return ir.Constant(ir.IntType(1), int(expr.value))
         
         elif isinstance(expr, StringLiteral):
-            # For simplicity, we'll just return a null pointer for strings
-            # In a real implementation, we'd create a global string constant
-            return ir.Constant(ir.IntType(8).as_pointer(), None)
+            # Create a global string constant
+            # Note: For full implementation, strings should be stored as global constants
+            # For now, we create a simple null-terminated string constant
+            string_bytes = bytearray(expr.value.encode('utf-8') + b'\0')
+            string_type = ir.ArrayType(ir.IntType(8), len(string_bytes))
+            string_global = ir.GlobalVariable(self.module, string_type, 
+                                             name=f".str.{len(self.module.globals)}")
+            string_global.initializer = ir.Constant(string_type, string_bytes)
+            string_global.global_constant = True
+            # Return pointer to the string
+            return self.builder.bitcast(string_global, ir.IntType(8).as_pointer())
         
         elif isinstance(expr, Identifier):
             if expr.name not in self.variables:

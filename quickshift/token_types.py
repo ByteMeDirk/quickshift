@@ -3,6 +3,7 @@ Token types for the Quickshift DSL
 """
 
 from enum import Enum, auto
+from typing import Any
 
 
 class TokenType(Enum):
@@ -67,7 +68,7 @@ class TokenType(Enum):
 
 
 class Token:
-    def __init__(self, type_: TokenType, value: any, line: int, column: int):
+    def __init__(self, type_: TokenType, value: Any, line: int, column: int):
         self.type = type_
         self.value = value
         self.line = line

@@ -5,7 +5,13 @@ Builds an Abstract Syntax Tree from tokens
 
 from typing import List, Optional
 from .token_types import Token, TokenType
-from .ast_nodes import *
+from .ast_nodes import (
+    Program, Statement, Expression, IntegerLiteral, FloatLiteral,
+    StringLiteral, BooleanLiteral, Identifier, VariableDeclaration,
+    Assignment, BinaryOp, UnaryOp, IfStatement, WhileStatement,
+    ForStatement, Parameter, FunctionDeclaration, FunctionCall,
+    ReturnStatement, Block, ExpressionStatement
+)
 
 
 class ParserError(Exception):

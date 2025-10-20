@@ -4,7 +4,13 @@ Performs type checking and semantic validation
 """
 
 from typing import Dict, Optional, List
-from .ast_nodes import *
+from .ast_nodes import (
+    Program, Statement, Expression, IntegerLiteral, FloatLiteral,
+    StringLiteral, BooleanLiteral, Identifier, VariableDeclaration,
+    Assignment, BinaryOp, UnaryOp, IfStatement, WhileStatement,
+    ForStatement, FunctionDeclaration, FunctionCall, ReturnStatement,
+    Block, ExpressionStatement
+)
 
 
 class SemanticError(Exception):
