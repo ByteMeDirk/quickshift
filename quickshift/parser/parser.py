@@ -1,19 +1,36 @@
+"""
+Parser implementation for the Quickshift DSL using PLY.
+"""
+
 import ply.yacc as yacc
 
-from quickshift.ast.ast import Assignment, SourceCall, SchemaCall, ColumnCall
+from quickshift.ast.ast import *
 from quickshift.lexer.lexer import QuickshiftLexer
 from quickshift.utils.errors import QuickshiftParseError
-
-lexer_instance = QuickshiftLexer()
-tokens = QuickshiftLexer.tokens  # Required for yacc
 
 
 class QuickshiftParser:
     """Parser for the Quickshift DSL."""
 
+    tokens = QuickshiftLexer.tokens  # Required by yacc
+
+    def __init__(self):
+        self.lexer = QuickshiftLexer()
+        self.parser = yacc.yacc(module=self, debug=False)
+
+    def parse(self, code):
+        """Parse Quickshift code and return AST."""
+        result = self.parser.parse(code, lexer=self.lexer.lexer)
+        # Filter out None entries from empty lines
+        return [node for node in result if node is not None]
+
+    # ========================================================================
+    # Grammar Rules
+    # ========================================================================
+
     def p_program(self, p):
         """
-        program : statements
+        program : statement_list
         """
         p[0] = p[1]
 
@@ -29,13 +46,39 @@ class QuickshiftParser:
 
     def p_statement(self, p):
         """
-        statement : assignment NEWLINE
+        statement : assignment SEMICOLON
+                  | select_statement SEMICOLON
                   | NEWLINE
         """
         if len(p) == 3:
             p[0] = p[1]
         else:
             p[0] = None
+
+    def p_select_statement(self, p):
+        """
+        select_statement : SELECT select_targets FROM IDENTIFIER
+        """
+        p[0] = SelectStatement(p[2], p[4])
+
+    def p_select_targets(self, p):
+        """
+        select_targets : select_list
+                       | ASTERISK
+        """
+        p[0] = p[1]
+
+    def p_select_list(self, p):
+        """
+        select_list : select_list COMMA IDENTIFIER
+                    | IDENTIFIER
+        """
+        if len(p) == 4:
+            # Extend existing list
+            p[0] = p[1] + [p[3]]
+        else:
+            # Single column as base case
+            p[0] = [p[1]]
 
     def p_assignment(self, p):
         """
@@ -84,9 +127,19 @@ class QuickshiftParser:
 
     def p_kwarg(self, p):
         """
-        kwarg : IDENTIFIER EQUALS value
+        kwarg : kwarg_name EQUALS value
         """
         p[0] = {p[1]: p[3]}
+
+    def p_kwarg_name(self, p):
+        """
+        kwarg_name : IDENTIFIER
+                   | SCHEMA
+                   | SOURCE
+                   | COLUMN
+        """
+        # Convert token back to lowercase string for use as parameter name
+        p[0] = p[1].lower() if isinstance(p[1], str) else p[1]
 
     def p_value(self, p):
         """
@@ -105,13 +158,12 @@ class QuickshiftParser:
             p[0] = p[1]
 
     def p_error(self, p):
+        """Error handling rule."""
         if p:
             raise QuickshiftParseError(
-                f"Syntax error at line {p.lineno}, column {p.lexpos}, token '{p.value}'"
+                f"Syntax error at token '{p.value}'",
+                line=p.lineno,
+                token=p.value
             )
         else:
-            raise QuickshiftParseError("Syntax error at EOF")
-
-    def __init__(self):
-        self.lexer = lexer_instance.lexer
-        self.parser = yacc.yacc(module=self)
+            raise QuickshiftParseError("Syntax error: unexpected end of file")

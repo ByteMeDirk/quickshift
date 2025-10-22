@@ -33,3 +33,12 @@ class ColumnCall(ASTNode):
 
     def __repr__(self):
         return f"ColumnCall({self.kwargs})"
+
+
+class SelectStatement(ASTNode):
+    def __init__(self, columns, source):
+        self.columns = columns
+        self.source = source
+
+    def __repr__(self):
+        return f"SelectStatement(columns={self.columns}, source={self.source})"
